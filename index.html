@@ -1,0 +1,565 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<title>Flashcards de philo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Caveat:wght@600&family=Instrument+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* Layout: a ring binder on the page. Index tabs choose a chapter, one punched card flips between the question (dot grid) and the answer (ruled lines), marking buttons sit underneath. */
+:root{
+  --bg:#f1e9f6; --fg:#2a1535; --muted:#6a5578;
+  --paper:#fffcfe; --paper-back:#fff6fb; --line:#e0d3ea; --rule:#efd8e7; --dot:#e6d9ee; --margin:#e0799f; --tab:#e8dcf0;
+  --accent:#a8217a; --on-accent:#ffffff; --good:#17794f; --on-good:#ffffff; --warn:#b9540a; --hl:#f7cbe4; --shadow:rgba(58,20,80,.35);
+  --c1:#a8217a; --c2:#6a3cc4; --c3:#2c5bcb; --c4:#0b7f80; --c5:#38821f; --c6:#a46f05; --c7:#c0431b; --c8:#bf2f5c;
+  --font-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --font-body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-hand:"Caveat","Bradley Hand","Segoe Print",cursive;
+  --lh:1.75rem;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1a0e24; --fg:#f3e8f8; --muted:#b7a3c6;
+    --paper:#291836; --paper-back:#311c40; --line:#412a54; --rule:#3d2850; --dot:#3a2549; --margin:#9a4a7a; --tab:#22122e;
+    --accent:#ec62bb; --on-accent:#2a0a1f; --good:#52d49d; --on-good:#06281b; --warn:#ffa25c; --hl:rgba(236,98,187,.32); --shadow:rgba(0,0,0,.65);
+    --c1:#f06ac0; --c2:#a98aff; --c3:#7ea6ff; --c4:#4fd1c9; --c5:#8fd36a; --c6:#f0b84a; --c7:#ff8a63; --c8:#ff7a9c;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#1a0e24; --fg:#f3e8f8; --muted:#b7a3c6;
+  --paper:#291836; --paper-back:#311c40; --line:#412a54; --rule:#3d2850; --dot:#3a2549; --margin:#9a4a7a; --tab:#22122e;
+  --accent:#ec62bb; --on-accent:#2a0a1f; --good:#52d49d; --on-good:#06281b; --warn:#ffa25c; --hl:rgba(236,98,187,.32); --shadow:rgba(0,0,0,.65);
+  --c1:#f06ac0; --c2:#a98aff; --c3:#7ea6ff; --c4:#4fd1c9; --c5:#8fd36a; --c6:#f0b84a; --c7:#ff8a63; --c8:#ff7a9c;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:400 1rem/1.5 var(--font-body);padding-inline:16px;padding-block:20px 36px;-webkit-text-size-adjust:100%}
+.app{max-width:40rem;margin-inline:auto;display:flex;flex-direction:column;gap:.9rem}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.head{display:flex;flex-direction:column;gap:.2rem}
+.eyebrow{margin:0;font:600 .72rem/1.2 var(--font-body);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+h1{margin:0;font:700 clamp(1.8rem,6.4vw,2.4rem)/1.05 var(--font-display);letter-spacing:-.02em;text-wrap:balance}
+
+.tabrow{margin-inline:-16px}
+.tabs{display:flex;gap:.4rem;overflow-x:auto;padding:.35rem 16px .6rem;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{flex:none;appearance:none;font:600 .84rem/1 var(--font-body);color:var(--muted);background:var(--tab);border:1px solid var(--line);border-top:4px solid var(--c,var(--accent));border-radius:.7rem .7rem .35rem .35rem;padding:.55rem .8rem;min-height:2.75rem;cursor:pointer;display:inline-flex;align-items:center;gap:.45rem}
+.tab:hover{color:var(--fg)}
+.tab[aria-selected="true"]{background:var(--paper);color:var(--fg);box-shadow:0 10px 14px -10px var(--shadow)}
+.tab .n{font-weight:500;font-variant-numeric:tabular-nums;opacity:.75}
+
+.meta{display:flex;justify-content:space-between;gap:.5rem;font:500 .85rem/1.2 var(--font-body);color:var(--muted);font-variant-numeric:tabular-nums}
+.prog{height:6px;border-radius:99px;background:var(--line);display:flex;overflow:hidden}
+.prog i{display:block;height:100%;transition:width .3s}
+.p-ok{background:var(--good)}
+.p-redo{background:var(--warn)}
+
+.scene{perspective:1500px}
+.card{display:grid;position:relative;cursor:pointer;transform-style:preserve-3d;transition:transform .6s cubic-bezier(.2,.75,.25,1);min-height:22rem;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none;border-radius:1rem}
+.card.flipped{transform:rotateY(180deg)}
+.face{grid-area:1/1;position:relative;display:flex;flex-direction:column;gap:.9rem;min-width:0;padding:1rem 1.1rem 1.1rem 3.4rem;border:1px solid var(--line);border-radius:1rem;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:0 1px 0 var(--line),0 20px 30px -20px var(--shadow);overflow:hidden}
+.face::before{content:"";position:absolute;inset:0 auto 0 0;width:2.2rem;pointer-events:none;
+  background:
+    radial-gradient(circle at 1.15rem 18%,var(--bg) 0 .48rem,transparent calc(.48rem + 1px)),
+    radial-gradient(circle at 1.15rem 50%,var(--bg) 0 .48rem,transparent calc(.48rem + 1px)),
+    radial-gradient(circle at 1.15rem 82%,var(--bg) 0 .48rem,transparent calc(.48rem + 1px))}
+.front{background:radial-gradient(var(--dot) 1.1px,transparent 1.5px) 0 0/1.5rem 1.5rem,var(--paper)}
+.back{transform:rotateY(180deg);background:var(--paper-back)}
+.back::after{content:"";position:absolute;top:0;bottom:0;left:2.75rem;width:1px;background:var(--margin);opacity:.65;pointer-events:none}
+.top{display:flex;justify-content:space-between;align-items:baseline;gap:1rem}
+.tag{font:600 1.4rem/1 var(--font-hand);color:var(--c,var(--accent))}
+.kind{font:600 .68rem/1 var(--font-body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted);flex:none}
+.q{margin:auto 0;font:600 clamp(1.35rem,5.3vw,1.75rem)/1.22 var(--font-display);letter-spacing:-.01em;text-wrap:balance;overflow-wrap:break-word}
+.tap{font:500 .78rem/1 var(--font-body);color:var(--muted)}
+
+.ans{flex:1;font-size:1rem;line-height:var(--lh);overflow-wrap:break-word;
+  background:repeating-linear-gradient(to bottom,transparent 0,transparent calc(var(--lh) - 1px),var(--rule) calc(var(--lh) - 1px),var(--rule) var(--lh))}
+.ans > *{margin:0}
+.ans > * + *{margin-top:var(--lh)}
+.ans ul,.ans ol{padding-left:1.15rem}
+.ans li{margin:0}
+.ans b{font-weight:600;background:linear-gradient(transparent 60%,var(--hl) 60%)}
+.ans .vs{display:grid;grid-template-columns:1fr 1fr;gap:0 1rem}
+.ans .vs div{min-width:0}
+.ans .vs span,.ans .vs b{display:block}
+
+.panel{min-height:22rem;border:1px solid var(--line);border-radius:1rem;background:var(--paper);padding:1.6rem;display:flex;flex-direction:column;align-items:flex-start;justify-content:center;gap:1rem;box-shadow:0 1px 0 var(--line),0 20px 30px -20px var(--shadow)}
+.panel .big{font:700 clamp(3.2rem,16vw,4.6rem)/1 var(--font-display);letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.panel .big small{font-size:.42em;color:var(--muted);font-weight:600}
+.panel p{margin:0;max-width:30rem}
+.panel .row{display:flex;flex-wrap:wrap;gap:.6rem}
+
+.actions{display:grid;grid-template-columns:3rem 1fr 1fr 3rem;gap:.55rem}
+.btn,.icon-btn{appearance:none;min-height:3rem;border-radius:.85rem;border:1.5px solid var(--line);background:var(--paper);color:var(--fg);cursor:pointer;transition:transform .12s}
+.btn{font:600 1rem/1 var(--font-body);padding:.7rem .9rem}
+.btn:active:not(:disabled),.icon-btn:active:not(:disabled){transform:scale(.97)}
+.btn.redo{border-color:var(--warn);color:var(--warn)}
+.btn.ok{background:var(--good);border-color:var(--good);color:var(--on-good)}
+.icon-btn{display:grid;place-items:center}
+.btn:disabled,.icon-btn:disabled{opacity:.4;cursor:default}
+
+.tools{display:flex;flex-wrap:wrap;gap:.6rem;justify-content:space-between;align-items:center}
+.seg{display:inline-flex;border:1.5px solid var(--line);border-radius:.8rem;overflow:hidden;background:var(--paper)}
+.seg button{appearance:none;border:0;background:transparent;color:var(--muted);font:600 .86rem/1 var(--font-body);padding:.7rem .9rem;min-height:2.75rem;cursor:pointer;display:inline-flex;gap:.4rem;align-items:center}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--on-accent)}
+.seg .cnt{font-variant-numeric:tabular-nums;opacity:.85}
+.tools-r{display:flex;gap:.2rem}
+.ghost{appearance:none;border:0;background:transparent;color:var(--muted);font:600 .86rem/1 var(--font-body);padding:.7rem .6rem;min-height:2.75rem;border-radius:.7rem;cursor:pointer;text-decoration:underline;text-underline-offset:.22em;text-decoration-color:var(--line)}
+.ghost[aria-pressed="true"]{color:var(--accent);text-decoration-color:var(--accent)}
+.hint{margin:0;font:400 .78rem/1.4 var(--font-body);color:var(--muted)}
+@media (hover:none){.hint{display:none}}
+@media (prefers-reduced-motion:reduce){.card,.prog i,.btn,.icon-btn{transition:none}}
+</style>
+</head>
+<body>
+<main class="app">
+  <header class="head">
+    <p class="eyebrow">Cahier de philo · cartes de révision</p>
+    <h1>Flashcards de philo</h1>
+  </header>
+
+  <div class="tabrow"><div class="tabs" id="tabs" role="tablist" aria-label="Chapitres"></div></div>
+
+  <div class="meta"><span id="pos" aria-live="polite"></span><span id="score"></span></div>
+  <div class="prog" aria-hidden="true"><i class="p-ok" id="p-ok"></i><i class="p-redo" id="p-redo"></i></div>
+
+  <div class="scene" id="scene">
+    <div class="card" id="card" role="button" tabindex="0" aria-label="Retourner la carte">
+      <div class="face front" id="front"></div>
+      <div class="face back" id="back"></div>
+    </div>
+  </div>
+  <div class="panel" id="panel" hidden></div>
+
+  <div class="actions">
+    <button class="icon-btn" id="prev" aria-label="Carte précédente"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button class="btn redo" id="b-redo">À revoir</button>
+    <button class="btn ok" id="b-ok">Je savais</button>
+    <button class="icon-btn" id="next" aria-label="Carte suivante"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg></button>
+  </div>
+
+  <div class="tools">
+    <div class="seg" role="group" aria-label="Cartes à afficher">
+      <button id="m-all" aria-pressed="true">Toutes</button>
+      <button id="m-redo" aria-pressed="false">À revoir <span class="cnt" id="redo-n">0</span></button>
+    </div>
+    <div class="tools-r">
+      <button class="ghost" id="shuf" aria-pressed="false">Mélanger</button>
+      <button class="ghost" id="reset">Remettre à zéro</button>
+    </div>
+  </div>
+  <p class="hint">Espace : retourner · ← → : naviguer · 1 : à revoir · 2 : je savais</p>
+</main>
+
+<script>
+(function(){
+var CATS=[
+  {id:'intro',n:'Introduction',k:1},
+  {id:'dom',n:'Domaines',k:2},
+  {id:'mythe',n:'Mythe & science',k:3},
+  {id:'concept',n:'Concept & jugement',k:4},
+  {id:'raison',n:'Raisonnement',k:5},
+  {id:'types',n:'Types & syllogismes',k:6},
+  {id:'soph',n:'Sophismes',k:7},
+  {id:'biais',n:'Biais cognitifs',k:8}
+];
+var D=[], counts={};
+function add(c,q,a){counts[c]=(counts[c]||0)+1;D.push({id:c+'-'+counts[c],c:c,q:q,a:a});}
+
+/* ---------- 1. Introduction ---------- */
+add('intro',"Quels sont les trois types d’objectifs du cours de philo ?",
+`<ul><li><b>Savoirs</b> : faits, personnes, contexte, histoire</li><li><b>Savoir-faire</b> : apprendre à bien penser</li><li><b>Savoir-être</b> : cultiver une manière de vivre où la réflexion occupe une place importante</li></ul>`);
+add('intro',"En quoi consiste le « savoir-faire » ?",
+`<p>Apprendre à <b>bien penser</b> :</p><ul><li>articuler une pensée (réflexion structurée, argumentée)</li><li>se protéger des mauvaises pensées</li><li>repérer les idées douteuses, non fondées</li><li>identifier les failles dans un argument</li></ul>`);
+add('intro',"En quoi consiste le « savoir-être » ?",
+`<p>Cultiver une manière de vivre où la <b>réflexion</b> occupe une place importante.</p><p>Quand on pense mieux, on est plus libre : ça apporte du pouvoir et du bien-être. But : se développer une philosophie.</p>`);
+add('intro',"Où et quand la philosophie est-elle apparue ?",
+`<p>En <b>Grèce antique</b>, vers le 6<sup>e</sup> siècle av. J.-C.</p><p>Ce sont les Grecs qui créent le concept, puis il se répand dans le monde.</p>`);
+add('intro',"Quelle est l’étymologie du mot « philosophie » ?",
+`<p>Du grec ancien : <b>philia</b> (ami) + <b>sophia</b> (sagesse).</p><p>Le philosophe est donc <b>l’ami de la sagesse</b>.</p>`);
+add('intro',"Pourquoi le philosophe n’est-il pas un sage ?",
+`<p>Le sage possède la sagesse. Le philosophe la <b>désire</b> : il est en quête permanente.</p><p>La sagesse lui est extérieure : quand on est l’ami d’un autre, on n’est pas l’autre.</p><ul><li>✗ il ne prétend pas savoir la vérité</li><li>✓ il veut savoir la vérité</li></ul>`);
+add('intro',"Exemple : que cherche le philosophe dans un débat ?",
+`<p>Le philosophe qui gagne est celui qui <b>s’approche le plus de la vérité</b>.</p><p>Il ne cherche pas à gagner : il veut rencontrer quelqu’un qui lui fait comprendre ses erreurs.</p>`);
+add('intro',"Exemple de Socrate face à la peine de mort ?",
+`<p>Au début, Socrate accepte la peine de mort : selon sa philosophie, il n’a aucune raison de fuir.</p><p>Ses amis insistent qu’il s’enfuie, donc ils étudient cette possibilité.</p><p>→ <b>Ouverture à la remise en question</b>.</p>`);
+add('intro',"Un philosophe qui ne possède pas la vérité peut-il avoir une philosophie ?",
+`<p><b>Oui.</b> Il propose des réponses et progresse en chemin vers la vérité.</p><p>Il est à mi-chemin entre le sage et l’ignorant : toujours prêt à changer d’idée si on lui prouve le contraire, même s’il propose des réponses.</p>`);
+add('intro',"Qu’est-ce qu’un dogme ?",
+`<p>Une <b>conviction qu’on refuse de remettre en question</b>.</p><p>Le philosophe n’est pas dogmatique : il garde ses convictions, mais les tient en question.</p>`);
+add('intro',"Anti-dogmatisme théorique vs pratique ?",
+`<ul><li><b>Théorique</b> : on reste ouvert à changer d’idée ou de position</li><li><b>Pratique</b> : on cherche activement à devenir plus sage, par des pratiques et des exercices spécifiques</li></ul>`);
+add('intro',"Quel est le paradoxe du philosophe ?",
+`<p>Il n’est <b>ni sage ni ignorant</b> : il est entre les deux (l’ami de la sagesse).</p><p>Il n’a pas le droit de cesser définitivement la recherche. Il cherche activement parce qu’il n’a jamais perdu espoir de trouver.</p>`);
+add('intro',"Qu’est-ce que le scepticisme ?",
+`<p>Une position qui va plus loin : elle dit qu’<b>aucune vérité</b> n’est possible aux grandes questions. Elle combat toutes les autres philosophies.</p><p>Paradoxalement, c’est une position <b>dogmatique</b> (« il n’y a pas de vérité »), alors que le philosophe cherche toujours.</p>`);
+add('intro',"Qu’est-ce que la doxa ?",
+`<p>Une <b>croyance dominante</b> dans une société, non évaluée rationnellement, instable et généralement infondée.</p><p>Elle fait obstacle à la vérité et au bonheur : selon les philosophes, elle « nous rend malade ». Ceux qui y adhèrent sont faciles à manipuler.</p>`);
+add('intro',"Pourquoi dire que sophia = sagesse est une simplification ?",
+`<p><b>Sophia</b> = savoir + sagesse.</p><ul><li>les <b>savoirs</b> sont les moyens</li><li>la <b>sagesse</b> est la fin</li></ul><p>Il s’agit de savoirs fondamentaux autour de « comment vivre », individuellement et collectivement.</p>`);
+add('intro',"Comment décrire la philosophie antique ?",
+`<p>Un <b>mode de vie réfléchi et justifié</b> : quête de la vie bonne et du bonheur. C’est une thérapie qui guérit les âmes des mauvaises passions.</p><p>Elle s’accompagne d’un exposé théorique : raison, réfutable, argumenté.</p>`);
+add('intro',"Qu’est-ce qui forme « une philosophie » ?",
+`<p>En combinant tous les domaines du savoir, un <b>système de réponses cohérentes</b> (minimalement logique, physique et éthique) forme une philosophie.</p>`);
+add('intro',"Pourquoi faut-il remonter à des questions plus fondamentales ?",
+`<p>Pour arriver à des conclusions dans un autre champ.</p><p>Ex. : l’être humain est fondamentalement mauvais → régime politique totalitaire.</p>`);
+
+/* ---------- 2. Domaines ---------- */
+add('dom',"Logique : de quoi s’agit-il ?",
+`<p>L’étude des <b>raisonnements valides</b> : ceux qui, par leur forme, mènent à une conclusion nécessairement vraie (si les prémisses le sont).</p><p>But : faire de bons raisonnements.</p>`);
+add('dom',"Théorie de la connaissance : de quoi s’agit-il ?",
+`<p>L’étude des conditions des discours vrais.</p><ul><li>Quels sont les <b>critères de la vérité</b> ?</li><li>Comment les humains peuvent-ils connaître ?</li></ul>`);
+add('dom',"Ontologie : de quoi s’agit-il ?",
+`<p><b>Onto</b> = être, <b>logos</b> = discours.</p><p>Réflexion sur la <b>réalité</b> : qu’est-ce qui est réel, qu’est-ce qui est une illusion ? Comment être certain que le monde est réel ?</p>`);
+add('dom',"Métaphysique : de quoi s’agit-il ?",
+`<p>L’étude des réalités <b>immatérielles</b>, non physiques (morale, âme…).</p>`);
+add('dom',"Physique : de quoi s’agit-il ?",
+`<p>Les premiers philosophes étaient des physiciens.</p><p>Étude du <b>monde matériel</b> : comment le monde fonctionne (atomes, forces…).</p>`);
+add('dom',"Anthropologie philosophique : de quoi s’agit-il ?",
+`<p>L’étude de l’<b>être humain</b> : qu’est-ce qui distingue les humains des autres animaux ?</p>`);
+add('dom',"Psychologie : de quoi s’agit-il ?",
+`<p>L’étude de l’<b>âme humaine</b> et de la façon dont elle fonctionne.</p>`);
+add('dom',"Sociologie : de quoi s’agit-il ?",
+`<p>Origines, développement, classes sociales et rapports dans la société.</p>`);
+add('dom',"Éthique et philosophie politique ?",
+`<ul><li><b>Éthique</b> : comment doit-on vivre ? Réflexion sur le bien et le mal</li><li><b>Philosophie politique</b> : quel est le meilleur régime politique possible ? Que faire pour vivre dans une société idéale ?</li></ul>`);
+
+/* ---------- 3. Mythe & science ---------- */
+add('mythe',"Qu’est-ce que le mythe (muthos) ?",
+`<p>Un <b>récit</b>, une histoire, de l’imagination. Il s’oppose au <b>logos</b> (la raison).</p><ul><li>non argumenté, non démontré rationnellement</li><li>surtout raconté de façon orale</li><li>promeut une valeur d’ordre moral</li><li>répond à de grandes questions fondamentales (mythe ~ religion)</li></ul>`);
+add('mythe',"Pourquoi dit-on que le mythe est infalsifiable ?",
+`<p>Parce qu’on ne peut <b>ni le prouver ni le nier</b>.</p><p>Il n’est pas argumenté ni démontré rationnellement.</p>`);
+add('mythe',"À quoi servent les mythes ?",
+`<ul><li>idéaliser et amplifier certains aspects d’une personne</li><li>construire un récit autour d’elle</li><li>promouvoir et véhiculer une valeur ou un message</li></ul><p>Ils unifient une société, ont parfois un rôle éducatif. Il y en a de bons et de mauvais.</p>`);
+add('mythe',"Que reprochent les philosophes au mythe ?",
+`<p>Son <b>infalsifiabilité</b> et son caractère <b>non argumenté</b>. Souvent, les gens y croient sans vraiment le remettre en question.</p><p>Les mythes créent facilement une société unie. La philosophie y arrive moins, car elle passe par le débat.</p>`);
+add('mythe',"Philosophie vs mythe : tableau comparatif ?",
+`<div class="vs"><div><b>Philosophie</b><span>exposé théorique</span><span>raison (logos)</span><span>débat</span><span>réfutable</span><span>argumentée</span></div><div><b>Mythe</b><span>récit, histoire</span><span>s’oppose au logos</span><span>imagination</span><span>infalsifiable</span><span>non argumenté</span></div></div>`);
+add('mythe',"Qu’est-ce qui caractérise la science ?",
+`<ul><li>observation</li><li>méthode expérimentale</li><li>analyse statistique</li><li>objet matériel</li></ul><p>La philosophie, elle, repose sur la contextualisation et l’argumentation, et son objet est immatériel.</p>`);
+
+/* ---------- 4. Concept & jugement ---------- */
+add('concept',"Qu’est-ce qu’un concept ?",
+`<p>Une <b>idée abstraite et générale</b> qui réunit les caractères communs à tous les individus appartenant à une même catégorie.</p><p>Outil principal pour connaître et maîtriser la réalité (la science aussi).</p>`);
+add('concept',"Que veut dire « maîtriser un concept » ?",
+`<p>Parvenir à sa <b>définition</b> : identifier son <b>essence</b>, c’est-à-dire la nature permanente d’un être ou d’une chose, ce qui la distingue des autres réalités.</p>`);
+add('concept',"Comment construit-on une bonne définition ?",
+`<p><b>Définition = genre + attribut spécifique</b></p><ul><li><b>Genre</b> : concept plus général dans lequel se retrouve le concept à définir (animal)</li><li><b>Attribut spécifique</b> : ce qui le distingue des autres concepts du même genre (rationnel)</li></ul><p>Ex. : animal + rationnel → être humain</p>`);
+add('concept',"Quelles sont les 5 erreurs de définition à éviter ?",
+`<ol><li><b>Trop large</b> (mauvais attribut ou aucun) : « L’être humain est un animal »</li><li><b>Trop restrictive</b> (attribut trop précis) : « …un animal qui étudie la physique quantique »</li><li><b>Circulaire</b> (l’attribut revient au concept) : « …un animal qui fait preuve d’humanité »</li><li><b>Négative</b> (dit ce qu’il n’est pas) : « …un animal qui n’a pas d’ailes »</li><li><b>Mauvais genre</b> : « L’être humain est un oiseau rationnel »</li></ol>`);
+add('concept',"Définition circulaire : qu’est-ce qui cloche ?",
+`<p>L’<b>attribut revient au concept</b> qu’on veut définir.</p><p>Ex. : « L’être humain est un animal qui fait preuve d’humanité. »</p>`);
+add('concept',"Qu’est-ce qu’un jugement ?",
+`<p>Une <b>opération cognitive</b> qui met en rapport deux concepts afin d’affirmer ou de nier une relation entre eux.</p><p>Un jugement peut être <b>vrai ou faux</b>. Ex. : « Les balles sont rondes », « Socrate est un humain ».</p>`);
+add('concept',"Quels sont les quantificateurs d’un jugement ?",
+`<ul><li><b>universel</b> (« toutes les balles sont rondes ») ou <b>particulier</b> (« certaines balles sont rondes »)</li><li><b>affirmatif</b> (« les balles sont rondes ») ou <b>négatif</b> (« aucune balle n’est ronde »)</li></ul>`);
+add('concept',"Quels sont les 4 types de jugements selon leur structure ?",
+`<ol><li><b>Catégorique</b> (A est B) : « Les êtres humains sont intelligents »</li><li><b>Hypothétique</b> (si A alors B) : « Si je ne me repose pas, je serai malade »</li><li><b>Disjonctif</b> (ou bien A ou bien B) : « Ou bien tu es en santé, ou bien tu es malade »</li><li><b>Conjonctif</b> (A et B sont C) : « Les chiens et les chats sont des animaux »</li></ol><p>Attention : ne pas couper un jugement en deux.</p>`);
+add('concept',"Quels sont les 4 types de jugements selon leur contenu ?",
+`<ol><li><b>Fait</b></li><li><b>Valeur</b></li><li><b>Préférence</b></li><li><b>Prescription</b></li></ol>`);
+add('concept',"Jugement de fait : définition et exemple ?",
+`<p>Il prétend affirmer quelque chose de <b>réel</b> : il peut être vrai ou faux selon la réalité.</p><p>Ex. : « La planète se réchauffe. »</p>`);
+add('concept',"Jugement de valeur : définition et exemple ?",
+`<p>Une <b>évaluation</b> : il affirme ou nie la valeur d’une chose. Pour le confirmer ou l’infirmer, on regarde la raison sur laquelle il se fonde. Valeur démontrée suffisamment = jugement juste.</p><p>Ex. : « C’est très mauvais que la planète se réchauffe » → car… ?</p>`);
+add('concept',"Jugement de préférence : définition et exemple ?",
+`<p>Le <b>goût ou l’affection</b> d’une personne pour une chose. Il a peu d’intérêt philosophique : il ne sert à rien à justifier.</p><p>Ex. : « Je préférerais que la planète ne se réchauffe pas. »</p>`);
+add('concept',"Jugement de prescription : définition et exemple ?",
+`<p>Il donne un <b>conseil, un ordre ou un commandement</b> (à l’impératif). Philosophiquement, il peut être fondé sur un jugement de valeur.</p><p>Ex. : « Cesse de polluer » → « C’est très mauvais que la planète se réchauffe » → car…</p>`);
+
+/* ---------- 5. Raisonnement ---------- */
+add('raison',"Qu’est-ce qu’un raisonnement ?",
+`<p>On <b>lie différentes propositions</b> entre elles : l’une est une <b>conclusion</b> tirée à partir des autres (les <b>prémisses</b>).</p><p>Il contient minimalement 2 propositions : une prémisse et une conclusion. Il permet de conclure à autre chose.</p>`);
+add('raison',"Que sont les indicateurs d’inférence ?",
+`<p>Des marqueurs qui indiquent quand on se déplace entre <b>prémisse ↔ conclusion</b>. Ils rendent explicite l’intention d’avancer un raisonnement (lien logique entre différents énoncés).</p><p>Il y a des indicateurs de prémisse et des indicateurs de conclusion.</p>`);
+add('raison',"Quels sont les indicateurs de prémisse ?",
+`<p><b>car, puisque, parce que, étant donné que, comme</b></p><p>Ex. : « Tous les citoyens devraient se tenir au fait de la situation politique de leur pays, <b>car</b> il en va de leur intérêt. » (prémisse : il en va de leur intérêt)</p>`);
+add('raison',"Quels sont les indicateurs de conclusion ?",
+`<p><b>par conséquent, donc, ainsi, c’est pourquoi, il s’ensuit que</b></p><p>Ex. : « Je pense <b>donc</b> je suis. » (conclusion : je suis)</p>`);
+add('raison',"« Et, mais, de plus, par ailleurs » sont-ils des indicateurs d’inférence ?",
+`<p><b>Non.</b> Il ne faut pas les confondre : ils ne marquent ni prémisse ni conclusion. Ils servent à <b>ajouter</b> une autre prémisse (P1 + P2 + P3 → C).</p><p>Prémisses et conclusion n’ont pas besoin d’être dans un ordre en particulier.</p>`);
+add('raison',"Y a-t-il raisonnement quand il n’y a aucun indicateur d’inférence ?",
+`<p><b>Oui, parfois.</b> Même sans indicateur, une conclusion peut être soutenue par des prémisses.</p><p>Ex. : « La vie n’a pas de sens. Nous travaillons comme des acharnés, nous faisons des sacrifices, et ça ne mène nulle part. »</p>`);
+add('raison',"Qu’est-ce qu’un raisonnement complexe ?",
+`<p>Il comporte plusieurs <b>étapes intermédiaires</b> : des raisonnements simples combinés.</p><p>La conclusion de certaines inférences sert elle-même de prémisse :</p><ul><li>prémisse 1 → <b>conclusion intermédiaire</b></li><li>prémisse 2 → <b>conclusion finale</b></li></ul>`);
+add('raison',"Peut-on baser quelque chose de controversé sur quelque chose de controversé ?",
+`<p><b>Non.</b> Une prémisse controversée n’est pas un bon point de départ : elle est facilement réfutable.</p><p>On part d’une évidence pour arriver à une conclusion moins évidente.</p>`);
+add('raison',"Qu’est-ce qu’un énoncé superflu ?",
+`<p>Presque tous les textes argumentatifs en contiennent : ce sont des énoncés qui <b>ne servent pas à l’argumentation</b>.</p><p>L’auteur n’argumente pas tout le temps.</p>`);
+add('raison',"Raisonnement vs explication : quelle différence ?",
+`<ul><li><b>Raisonnement</b> : l’auteur essaie de nous démontrer quelque chose ou de nous convaincre. Ex. : « Julien agit très mal, car il commet des crimes. »</li><li><b>Explication</b> : l’auteur essaie de rendre compte d’un état de choses, de dire pourquoi c’est ainsi. Ex. : « Julien commet des crimes, car il a eu une enfance difficile. »</li></ul>`);
+add('raison',"« Les Canadiens ne sont pas parmi les meilleures équipes, car ils manquent de talent. » Raisonnement ou explication ?",
+`<p><b>Explication.</b> Elle explique l’état des choses, mais ne le prouve pas.</p>`);
+add('raison',"De quoi dépend la valeur d’un raisonnement ?",
+`<p>De deux facteurs :</p><ul><li>la <b>vérité ou crédibilité</b> de ses prémisses</li><li>la mesure dans laquelle elles <b>soutiennent</b> la conclusion</li></ul><p>Toute prémisse controversée ou non évidente devrait être démontrée, sinon l’argument est facilement attaquable.</p>`);
+add('raison',"Validité formelle vs informelle ?",
+`<p>La validité se demande si les prémisses soutiennent suffisamment et correctement la conclusion.</p><ul><li><b>Informelle</b> : les prémisses sont-elles pertinentes, suffisantes ? Le tout est-il cohérent ?</li><li><b>Formelle</b> : en analysant la forme, la conclusion est nécessairement vraie si les prémisses sont vraies</li></ul>`);
+add('raison',"Parmi déduction, induction et analogie, lesquels sont valides au sens strict ?",
+`<p>Seuls les raisonnements <b>déductifs</b>.</p><p>L’induction et l’analogie sont <b>recevables</b>, mais pas valides au sens strict : leurs conclusions peuvent être fausses même si les prémisses sont vraies.</p>`);
+add('raison',"Un raisonnement déductif peut-il être attaqué ?",
+`<p><b>Oui</b>, par ses prémisses (si elles sont fausses).</p><p><b>Vérité ≠ validité.</b></p>`);
+
+/* ---------- 6. Types & syllogismes ---------- */
+add('types',"Qu’est-ce que le raisonnement inductif ?",
+`<p>Généraliser une propriété vérifiée dans un certain nombre de <b>cas particuliers</b> à tous les cas analogues : on passe de plusieurs cas particuliers à une affirmation générale.</p><ul><li>P1 : cet être humain est rationnel</li><li>P2 : cet autre aussi</li><li>P3 : ce troisième aussi</li><li>P4 : tous ceux que j’observe sont rationnels</li><li>C : <b>tous</b> les êtres humains sont rationnels</li></ul>`);
+add('types',"Quand une induction est-elle recevable ?",
+`<p>Elle n’est pas valide au sens strict : il est toujours possible de trouver un <b>contre-exemple</b>.</p><p>Elle est recevable si :</p><ul><li>l’échantillonnage est suffisamment important</li><li>l’échantillonnage est représentatif</li><li>on ne trouve pas de contre-exemple pour l’instant</li></ul>`);
+add('types',"Qu’est-ce que le raisonnement par analogie ?",
+`<p>Certaines ressemblances entre x étant connues, on suppose qu’il en existe d’<b>autres</b>.</p><ul><li>P1 : A et B sont X (ils peuvent en avoir plus)</li><li>P2 : A est Y</li><li>C : B est Y</li></ul><p>Les prémisses n’entraînent pas la conclusion : elle peut être fausse.</p>`);
+add('types',"Exemple de raisonnement par analogie ?",
+`<p>Les chevaux et les humains ont besoin d’être dressés ou éduqués pour avoir une utilité. Les chevaux, on les confie à un spécialiste, pas au premier venu.</p><p>Donc les humains à éduquer devraient être confiés à un ou des spécialistes plutôt qu’au premier venu.</p>`);
+add('types',"Qu’est-ce que le raisonnement déductif ?",
+`<p>Une synthèse de jugements qui établit un <b>rapport de nécessité logique</b> entre eux : si les prémisses sont vraies, la conclusion est <b>nécessairement</b> vraie.</p><ul><li>P1 : tous les humains sont mortels</li><li>P2 : Socrate est humain</li><li>C : donc Socrate est mortel</li></ul>`);
+add('types',"Qu’est-ce qu’une prémisse implicite ?",
+`<p>Une prémisse non écrite : à première vue, un raisonnement peut sembler n’en avoir qu’une seule.</p><p>« Ce type prend ses études au sérieux, donc il réussira sa vie. »</p><p>→ prémisse implicite : <b>ceux qui prennent leurs études au sérieux réussissent leur vie</b>.</p>`);
+add('types',"Syllogisme catégorique : forme et exemple ?",
+`<ul><li>P1 : tous les b sont c</li><li>P2 : a est b</li><li>C : donc a est c</li></ul><p>Ex. : tous les chats sont des animaux ; le lynx est un chat ; donc le lynx est un animal.</p>`);
+add('types',"Modus ponens : forme et exemple ?",
+`<ul><li>P1 : si p alors q</li><li>P2 : or p</li><li>C : donc q</li></ul><p>Ex. : si tu ne manges pas, tu auras faim ; or tu ne manges pas ; donc tu auras faim.</p>`);
+add('types',"Modus tollens : forme et exemple ?",
+`<ul><li>P1 : si p alors q</li><li>P2 : or <b>non q</b></li><li>C : donc <b>non p</b></li></ul><p>Ex. : s’il y a du soleil, il fait jour ; or il ne fait pas jour ; donc il n’y a pas de soleil.</p>`);
+add('types',"Syllogisme disjonctif : forme et exemple ?",
+`<ul><li>P1 : ou bien p, ou bien q</li><li>P2 : or non p</li><li>C : donc q</li></ul><p>Ex. : on est soit mort, soit vivant ; or je ne suis pas mort ; donc je suis vivant.</p>`);
+add('types',"Syllogisme hypothétique : forme et exemple ?",
+`<ul><li>P1 : si p alors q</li><li>P2 : si q alors r</li><li>C : donc si p alors r</li></ul><p>Ex. : s’il pleut, le sol sera mouillé ; si le sol est mouillé, il sera glissant ; donc s’il pleut, le sol sera glissant.</p>`);
+add('types',"Dilemme constructif : forme et exemple ?",
+`<ul><li>P1 : ou bien p, ou bien q</li><li>P2 : si p alors r</li><li>P3 : si q alors s</li><li>C : donc r ou s</li></ul><p>Ex. : ou bien j’étudie, ou bien je sors. Si j’étudie, je serai fatigué ; si je sors, je serai mal préparé. Donc je serai fatigué ou mal préparé.</p>`);
+add('types',"Quels sont les 4 types de propositions catégoriques ?",
+`<ul><li><b>A</b> : universelle affirmative (tous les x sont y)</li><li><b>E</b> : universelle négative (aucun x n’est y)</li><li><b>I</b> : particulière affirmative (certains x sont y)</li><li><b>O</b> : particulière négative (certains x ne sont pas y)</li></ul>`);
+add('types',"Quels sont les 3 éléments inhérents aux propositions d’un syllogisme catégorique ?",
+`<ul><li><b>S</b> : sujet de la conclusion</li><li><b>P</b> : prédicat de la conclusion</li><li><b>M</b> : moyen terme, qui revient dans les prémisses (lien entre S et P) et n’apparaît pas dans la conclusion</li></ul>`);
+add('types',"Combien y a-t-il de formes valides de syllogismes catégoriques ?",
+`<p><b>19 formes</b>, selon la position de M :</p><ul><li>M-P / S-M : AAA, EAE, AII, EIO</li><li>P-M / S-M : EAE, AEE, EIO, AOO</li><li>M-P / M-S : AAI, IAI, AII, EAO, OAO, EIO</li><li>P-M / M-S : AAI, AEE, IAI, EAO, EIO</li></ul>`);
+
+/* ---------- 7. Sophismes ---------- */
+add('soph',"Qu’est-ce qu’un sophisme ?",
+`<p>Un raisonnement incorrect, qui <b>ne respecte pas une règle de la logique</b>.</p>`);
+add('soph',"Si P alors Q. Or non P. Donc non Q. Quel sophisme ?",
+`<p><b>Négation de l’antécédent</b> (faux modus ponens).</p><p>Logiquement, on ne peut rien conclure à partir de la négation de l’antécédent.</p>`);
+add('soph',"Si P alors Q. Or Q. Donc P. Quel sophisme ?",
+`<p><b>Affirmation du conséquent</b> (faux modus tollens).</p><p>Dans ce cas, on ne peut rien conclure à partir de l’affirmation du conséquent.</p>`);
+add('soph',"Passer d’un jugement sur quelques cas à tous, sans que l’échantillon le justifie. Quel sophisme ?",
+`<p><b>Généralisation hâtive</b> : un mauvais raisonnement inductif.</p>`);
+add('soph',"Affirmer un lien de cause à effet sans preuve suffisante, en confondant corrélation ou coïncidence avec causalité. Quel sophisme ?",
+`<p><b>Lien causal douteux</b>.</p><p>Corrélation ou coïncidence ≠ causalité.</p>`);
+add('soph',"Affirmer qu’une situation nous limite à deux options, dont l’une est clairement meilleure, alors qu’il y en a d’autres. Quel sophisme ?",
+`<p><b>Faux dilemme</b>.</p>`);
+add('soph',"Justifier une conclusion avec une analogie irrecevable. Quel sophisme ?",
+`<p><b>Fausse analogie</b> : un mauvais raisonnement par analogie.</p>`);
+add('soph',"Prétendre réfuter ce qu’affirme une personne en l’attaquant, elle, et non ses arguments. Quel sophisme ?",
+`<p><b>Attaque à la personne</b>.</p>`);
+add('soph',"Déformer la position d’un interlocuteur pour la rendre facilement attaquable. Quel sophisme ?",
+`<p><b>La caricature</b> (aussi appelée « homme de paille »).</p>`);
+add('soph',"Prédire qu’une action ou une décision mènera à une catastrophe, par un enchaînement de causes et d’effets dont la probabilité est douteuse ou exagérée. Quel sophisme ?",
+`<p><b>Pente fatale</b>.</p>`);
+add('soph',"Justifier une affirmation en invoquant qu’un grand nombre de personnes y adhèrent. Quel sophisme ?",
+`<p><b>Appel à la popularité</b>.</p>`);
+add('soph',"Nullifier un comportement condamnable en soulignant que d’autres font de même. Quel sophisme ?",
+`<p><b>Double faute</b>.</p>`);
+add('soph',"Affirmer qu’un énoncé est vrai parce qu’on n’a pas pu démontrer sa fausseté. Quel sophisme ?",
+`<p><b>Appel à l’ignorance</b>.</p>`);
+add('soph',"Justifier une affirmation parce que des gens y adhéraient à une époque passée, ou parce qu’elle est nouvelle et donc forcément meilleure. Quel sophisme ?",
+`<p><b>Appel à la tradition</b> (ou à la modernité).</p>`);
+add('soph',"Prétendre qu’une affirmation est vraie parce qu’une autorité reconnue l’admet. Quel sophisme ?",
+`<p><b>Appel à l’autorité</b>.</p>`);
+add('soph',"Essayer de persuader quelqu’un en touchant une émotion (pitié, culpabilité, peur) plutôt qu’en donnant une raison valable. Quel sophisme ?",
+`<p><b>Appel à l’émotion</b>.</p>`);
+
+/* ---------- 8. Biais cognitifs ---------- */
+add('biais',"Qu’est-ce qu’un biais cognitif ?",
+`<p>Une tendance de l’esprit humain à <b>penser, juger ou prendre des décisions incorrectement, de manière systématique</b>.</p><p>Conséquence : ils nous éloignent de la rationalité. En prendre conscience aide à ne pas se faire manipuler.</p>`);
+add('biais',"Tendance à privilégier les informations qui confirment nos croyances préexistantes et à invalider celles qui les infirment. Quel biais ?",
+`<p><b>Biais de confirmation</b>.</p>`);
+add('biais',"Tendance à se fier à la première information rencontrée lors de la prise de décision. Quel biais ?",
+`<p><b>Biais d’ancrage</b>.</p>`);
+add('biais',"Tendance à laisser notre première impression d’une personne ou d’une chose influencer nos autres jugements sur elle. Quel biais ?",
+`<p><b>Effet de halo</b>.</p>`);
+add('biais',"Tendance à se juger responsable de ses succès et à culpabiliser les autres pour nos échecs. Quel biais ?",
+`<p><b>Biais d’auto-complaisance</b>.</p>`);
+add('biais',"Les gens moins qualifiés surestiment leur compétence, alors que les gens qualifiés tendent à la sous-estimer. Quel effet ?",
+`<p><b>Effet Dunning-Kruger</b>.</p>`);
+add('biais',"Tendance à interpréter et à juger les gens, les enjeux et les événements selon la perspective de notre propre culture. Quel biais ?",
+`<p><b>Biais culturel</b>.</p>`);
+
+/* ---------- App ---------- */
+function $(id){return document.getElementById(id);}
+var reduce=!!(window.matchMedia&&window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+var KEY='philo-flashcards-v1';
+var status={};
+try{status=JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(e){status={};}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(status));}catch(e){}}
+var state={cat:'all',mode:'all',shuf:false,order:[],pos:0,flipped:false,done:false,tok:0,arm:0};
+var card=$('card');
+
+function catOf(id){for(var i=0;i<CATS.length;i++){if(CATS[i].id===id)return CATS[i];}return null;}
+function idsOf(cat){var a=[];for(var i=0;i<D.length;i++){if(cat==='all'||D[i].c===cat)a.push(i);}return a;}
+function st(i){return status[D[i].id];}
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;}return a;}
+function plural(n,w){return n+' '+w+(n>1?'s':'');}
+
+function rebuild(){
+  var ids=idsOf(state.cat);
+  if(state.mode==='redo'){ids=ids.filter(function(i){return st(i)==='redo';});}
+  if(state.shuf){shuffle(ids);}
+  state.order=ids;state.pos=0;state.flipped=false;state.done=false;state.tok++;
+  render();
+}
+
+function render(){renderTabs();renderStats();renderStage();renderTools();}
+
+function renderTabs(){
+  var h='';
+  var all=idsOf('all'),okAll=0;
+  all.forEach(function(i){if(st(i)==='ok')okAll++;});
+  h+='<button class="tab" role="tab" data-cat="all" aria-selected="'+(state.cat==='all')+'" style="--c:var(--accent)">Tout<span class="n">'+okAll+'/'+all.length+'</span></button>';
+  CATS.forEach(function(c){
+    var ids=idsOf(c.id),ok=0;
+    ids.forEach(function(i){if(st(i)==='ok')ok++;});
+    h+='<button class="tab" role="tab" data-cat="'+c.id+'" aria-selected="'+(state.cat===c.id)+'" style="--c:var(--c'+c.k+')">'+c.n+'<span class="n">'+ok+'/'+ids.length+'</span></button>';
+  });
+  $('tabs').innerHTML=h;
+}
+
+function renderStats(){
+  var ids=idsOf(state.cat),ok=0,redo=0;
+  ids.forEach(function(i){var s=st(i);if(s==='ok')ok++;else if(s==='redo')redo++;});
+  $('score').textContent='Su '+ok+' · À revoir '+redo;
+  $('p-ok').style.width=(ok/ids.length*100)+'%';
+  $('p-redo').style.width=(redo/ids.length*100)+'%';
+  var p;
+  if(!state.order.length){p='Aucune carte';}
+  else if(state.done){p='Paquet terminé';}
+  else{p='Carte '+(state.pos+1)+' sur '+state.order.length;}
+  $('pos').textContent=p;
+}
+
+function setCard(){
+  var d=D[state.order[state.pos]],c=catOf(d.c);
+  card.style.setProperty('--c','var(--c'+c.k+')');
+  $('front').innerHTML='<div class="top"><span class="tag">'+c.n+'</span><span class="kind">Question</span></div><div class="q">'+d.q+'</div><div class="tap">Touche la carte pour la retourner</div>';
+  $('back').innerHTML='<div class="top"><span class="tag">'+c.n+'</span><span class="kind">Réponse</span></div><div class="ans">'+d.a+'</div>';
+  $('front').setAttribute('aria-hidden',state.flipped?'true':'false');
+  $('back').setAttribute('aria-hidden',state.flipped?'false':'true');
+}
+
+function renderPanel(){
+  var p=$('panel');
+  if(!state.order.length){
+    p.innerHTML='<div class="big">0</div><p>Aucune carte à revoir dans ce chapitre. Continue comme ça.</p><div class="row"><button class="btn ok" data-act="all">Voir toutes les cartes</button></div>';
+    return;
+  }
+  var ok=0,redo=0,n=state.order.length;
+  state.order.forEach(function(i){var s=st(i);if(s==='ok')ok++;else if(s==='redo')redo++;});
+  var msg=redo===0?'Tout le paquet est su. Passe à un autre chapitre ou mélange tout.':plural(redo,'carte')+' à revoir. Refais-les maintenant, tant que c’est frais.';
+  var h='<div class="big">'+ok+'<small>/'+n+'</small></div><p>'+msg+'</p><div class="row">';
+  if(redo>0){h+='<button class="btn redo" data-act="redo-now">Revoir les '+redo+'</button>';}
+  h+='<button class="btn" data-act="restart">Tout recommencer</button></div>';
+  p.innerHTML=h;
+}
+
+function renderStage(){
+  var empty=!state.order.length,showPanel=empty||state.done;
+  $('scene').hidden=showPanel;
+  $('panel').hidden=!showPanel;
+  $('b-ok').disabled=showPanel;
+  $('b-redo').disabled=showPanel;
+  $('next').disabled=showPanel||state.pos>=state.order.length-1;
+  $('prev').disabled=empty||(!state.done&&state.pos<=0);
+  if(showPanel){renderPanel();}
+  else{setCard();card.classList.toggle('flipped',state.flipped);}
+}
+
+function renderTools(){
+  var redo=0;
+  idsOf(state.cat).forEach(function(i){if(st(i)==='redo')redo++;});
+  $('redo-n').textContent=redo;
+  $('m-all').setAttribute('aria-pressed',state.mode==='all');
+  $('m-redo').setAttribute('aria-pressed',state.mode==='redo');
+  $('shuf').setAttribute('aria-pressed',state.shuf);
+  $('reset').textContent=state.arm?'Confirmer ?':'Remettre à zéro';
+}
+
+function flip(){
+  if(state.done||!state.order.length)return;
+  state.flipped=!state.flipped;
+  card.classList.toggle('flipped',state.flipped);
+  $('front').setAttribute('aria-hidden',state.flipped?'true':'false');
+  $('back').setAttribute('aria-hidden',state.flipped?'false':'true');
+}
+
+function go(p){
+  if(!state.order.length)return;
+  p=Math.max(0,Math.min(state.order.length-1,p));
+  var token=++state.tok,was=state.flipped;
+  state.flipped=false;state.done=false;
+  if(was&&!reduce&&!$('scene').hidden){
+    card.classList.remove('flipped');
+    setTimeout(function(){if(token!==state.tok)return;state.pos=p;render();},230);
+  }else{state.pos=p;render();}
+}
+
+function step(d){
+  if(!state.order.length)return;
+  if(state.done){if(d<0)go(state.order.length-1);return;}
+  go(state.pos+d);
+}
+
+function mark(v){
+  if(state.done||!state.order.length)return;
+  status[D[state.order[state.pos]].id]=v;save();
+  if(state.pos>=state.order.length-1){state.flipped=false;state.done=true;state.tok++;render();}
+  else{go(state.pos+1);}
+}
+
+function resetCat(){
+  idsOf(state.cat).forEach(function(i){delete status[D[i].id];});
+  save();state.mode='all';state.arm=0;rebuild();
+}
+
+/* events */
+$('tabs').addEventListener('click',function(e){
+  var b=e.target.closest('.tab');if(!b)return;
+  state.cat=b.getAttribute('data-cat');state.arm=0;rebuild();
+  var sel=document.querySelector('.tab[aria-selected="true"]');
+  if(sel&&sel.scrollIntoView){sel.scrollIntoView({inline:'nearest',block:'nearest',behavior:reduce?'auto':'smooth'});}
+});
+card.addEventListener('click',flip);
+$('prev').addEventListener('click',function(){step(-1);});
+$('next').addEventListener('click',function(){step(1);});
+$('b-ok').addEventListener('click',function(){mark('ok');});
+$('b-redo').addEventListener('click',function(){mark('redo');});
+$('m-all').addEventListener('click',function(){state.mode='all';state.arm=0;rebuild();});
+$('m-redo').addEventListener('click',function(){state.mode='redo';state.arm=0;rebuild();});
+$('shuf').addEventListener('click',function(){state.shuf=!state.shuf;rebuild();});
+$('reset').addEventListener('click',function(){
+  if(state.arm){resetCat();return;}
+  state.arm=setTimeout(function(){state.arm=0;renderTools();},3000);
+  renderTools();
+});
+$('panel').addEventListener('click',function(e){
+  var b=e.target.closest('[data-act]');if(!b)return;
+  var a=b.getAttribute('data-act');
+  if(a==='all'){state.mode='all';rebuild();}
+  else if(a==='redo-now'){state.mode='redo';rebuild();}
+  else if(a==='restart'){resetCat();}
+});
+document.addEventListener('keydown',function(e){
+  if(e.metaKey||e.ctrlKey||e.altKey)return;
+  var t=e.target,onCard=t===card,idle=t===document.body||t===document.documentElement;
+  if(e.key==='ArrowRight'){e.preventDefault();step(1);}
+  else if(e.key==='ArrowLeft'){e.preventDefault();step(-1);}
+  else if(e.key==='1'){mark('redo');}
+  else if(e.key==='2'){mark('ok');}
+  else if((e.key===' '||e.key==='Enter')&&(onCard||idle)){e.preventDefault();flip();}
+});
+
+rebuild();
+})();
+</script>
+
+</body>
+</html>
